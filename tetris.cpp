@@ -198,6 +198,25 @@ Game::Game(int startLevel)
     lastDrop_ = std::chrono::steady_clock::now();
 }
 
+Game::Game(GameMode mode, int startLevel)
+    : rng_(std::random_device{}())
+    , curr_(PieceType::I)
+    , next_(PieceType::I)
+    , level_(std::max(1, startLevel))
+    , mode_(mode)
+    , startTime_(static_cast<int>(
+          std::chrono::duration_cast<std::chrono::seconds>(
+              std::chrono::steady_clock::now().time_since_epoch()).count()))
+{
+    currentTime_ = startTime_;
+    refillBag();
+    curr_ = Piece(drawFromBag());
+    next_ = Piece(drawFromBag());
+    curr_.setCol((BOARD_W - curr_.size()) / 2);
+    curr_.setRow(0);
+    lastDrop_ = std::chrono::steady_clock::now();
+}
+
 void Game::reset() {
     *this = Game();
 }
@@ -488,6 +507,13 @@ void Game::holdPiece() {
 }
 
 int Game::dropMs() const {
+    if (mode_ == GameMode::Hell) {
+        return 50;  // Fastest possible speed
+    } else if (mode_ == GameMode::Endless) {
+        // Starts fast, gets even faster over time
+        // Speed increases with level, level increases every 10 lines
+        return std::max(30, 500 - (level_ - 1) * 30);
+    }
     return std::max(50, 800 - (level_ - 1) * 55);
 }
 
@@ -496,7 +522,7 @@ void Game::tick() {
     auto now = std::chrono::steady_clock::now();
     auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
                    now - lastDrop_).count();
-    if (ms < dropMs()) return;w's
+    if (ms < dropMs()) return;
 
     Piece p = curr_;
     p.setRow(p.row() + 1);

@@ -420,107 +420,134 @@ static int showMainMenu() {
             }
         }
 
-        // Mode selection
-        int menuY = sy + 12;
+        // Mode selection - 2x2 grid
+        int menuY = sy + 11;
         attron(COLOR_PAIR(19) | A_BOLD);
         mvprintw(menuY, cx + 10, "\xe2\x96\xb6  SELECT MODE  \xe2\x96\xb6");
         attroff(COLOR_PAIR(19) | A_BOLD);
 
-        // Classic mode card with glow effect
+        // Row 1: Classic + Stage
+        // Classic mode card
         int classicGlow = (frame / 2) % 8;
         int classicBorderColor = (classicGlow < 4) ? 10 : 32;
         attron(COLOR_PAIR(classicBorderColor) | A_BOLD);
-        // Card frame
         for (int i = 0; i < 26; ++i) {
-            mvprintw(menuY + 2, cx + 5 + i, "\xe2\x95\x90");
-            mvprintw(menuY + 6, cx + 5 + i, "\xe2\x95\x90");
+            mvprintw(menuY + 2, cx + 2 + i, "\xe2\x95\x90");
+            mvprintw(menuY + 6, cx + 2 + i, "\xe2\x95\x90");
         }
         for (int i = 0; i < 4; ++i) {
-            mvprintw(menuY + 3 + i, cx + 5, "\xe2\x95\x91");
-            mvprintw(menuY + 3 + i, cx + 30, "\xe2\x95\x91");
+            mvprintw(menuY + 3 + i, cx + 2, "\xe2\x95\x91");
+            mvprintw(menuY + 3 + i, cx + 27, "\xe2\x95\x91");
         }
-        mvprintw(menuY + 2, cx + 5, "\xe2\x95\x94");
-        mvprintw(menuY + 2, cx + 30, "\xe2\x95\x97");
-        mvprintw(menuY + 6, cx + 5, "\xe2\x95\x9a");
-        mvprintw(menuY + 6, cx + 30, "\xe2\x95\x9d");
+        mvprintw(menuY + 2, cx + 2, "\xe2\x95\x94");
+        mvprintw(menuY + 2, cx + 27, "\xe2\x95\x97");
+        mvprintw(menuY + 6, cx + 2, "\xe2\x95\x9a");
+        mvprintw(menuY + 6, cx + 27, "\xe2\x95\x9d");
         attroff(COLOR_PAIR(classicBorderColor) | A_BOLD);
-
         attron(COLOR_PAIR(10) | A_BOLD);
-        mvprintw(menuY + 3, cx + 8, "\xe2\x96\xb6 [1] CLASSIC");
+        mvprintw(menuY + 3, cx + 4, "\xe2\x96\xb6 [1] CLASSIC");
         attroff(COLOR_PAIR(10) | A_BOLD);
         attron(COLOR_PAIR(20));
-        mvprintw(menuY + 4, cx + 8, "  Infinite play");
-        mvprintw(menuY + 5, cx + 8, "  Choose difficulty");
+        mvprintw(menuY + 4, cx + 4, "  Infinite play");
+        mvprintw(menuY + 5, cx + 4, "  Choose difficulty");
         attroff(COLOR_PAIR(20));
 
-        // Stage mode card with glow effect
+        // Stage mode card
         int stageGlow = ((frame / 2) + 4) % 8;
         int stageBorderColor = (stageGlow < 4) ? 15 : 32;
         attron(COLOR_PAIR(stageBorderColor) | A_BOLD);
         for (int i = 0; i < 26; ++i) {
-            mvprintw(menuY + 2, cx + 34 + i, "\xe2\x95\x90");
-            mvprintw(menuY + 6, cx + 34 + i, "\xe2\x95\x90");
+            mvprintw(menuY + 2, cx + 31 + i, "\xe2\x95\x90");
+            mvprintw(menuY + 6, cx + 31 + i, "\xe2\x95\x90");
         }
         for (int i = 0; i < 4; ++i) {
-            mvprintw(menuY + 3 + i, cx + 34, "\xe2\x95\x91");
-            mvprintw(menuY + 3 + i, cx + 59, "\xe2\x95\x91");
+            mvprintw(menuY + 3 + i, cx + 31, "\xe2\x95\x91");
+            mvprintw(menuY + 3 + i, cx + 56, "\xe2\x95\x91");
         }
-        mvprintw(menuY + 2, cx + 34, "\xe2\x95\x94");
-        mvprintw(menuY + 2, cx + 59, "\xe2\x95\x97");
-        mvprintw(menuY + 6, cx + 34, "\xe2\x95\x9a");
-        mvprintw(menuY + 6, cx + 59, "\xe2\x95\x9d");
+        mvprintw(menuY + 2, cx + 31, "\xe2\x95\x94");
+        mvprintw(menuY + 2, cx + 56, "\xe2\x95\x97");
+        mvprintw(menuY + 6, cx + 31, "\xe2\x95\x9a");
+        mvprintw(menuY + 6, cx + 56, "\xe2\x95\x9d");
         attroff(COLOR_PAIR(stageBorderColor) | A_BOLD);
-
         attron(COLOR_PAIR(15) | A_BOLD);
-        mvprintw(menuY + 3, cx + 37, "\xe2\x96\xb6 [2] STAGE");
+        mvprintw(menuY + 3, cx + 33, "\xe2\x96\xb6 [2] STAGE");
         attroff(COLOR_PAIR(15) | A_BOLD);
         attron(COLOR_PAIR(20));
-        mvprintw(menuY + 4, cx + 37, "  20 stages");
-        mvprintw(menuY + 5, cx + 37, "  Objectives & rewards");
+        mvprintw(menuY + 4, cx + 33, "  20 stages");
+        mvprintw(menuY + 5, cx + 33, "  Objectives & rewards");
         attroff(COLOR_PAIR(20));
 
-        // High scores preview with better styling
-        auto highScores = loadHighScores();
-        if (!highScores.empty()) {
-            int hsY = menuY + 9;
-            // Decorative line
-            attron(COLOR_PAIR(19));
-            mvprintw(hsY - 1, cx + 10, "\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
-            attroff(COLOR_PAIR(19));
-
-            attron(COLOR_PAIR(19) | A_BOLD);
-            mvprintw(hsY, cx + 14, "\xe2\x98\x85 HIGH SCORES \xe2\x98\x85");
-            attroff(COLOR_PAIR(19) | A_BOLD);
-
-            // Rank icons
-            const char* rankIcons[] = {"\xe2\x98\x85", "\xe2\x98\x86", "\xe2\x98\x86"};
-            for (int i = 0; i < std::min(3, (int)highScores.size()); ++i) {
-                int rankColor = (i == 0) ? 19 : (i == 1) ? 20 : 11;
-                attron(COLOR_PAIR(rankColor) | A_BOLD);
-                mvprintw(hsY + 1 + i, cx + 10, "%s", rankIcons[i]);
-                attroff(COLOR_PAIR(rankColor) | A_BOLD);
-                attron(COLOR_PAIR(rankColor));
-                mvprintw(hsY + 1 + i, cx + 13, "#%d %-8s %8d pts",
-                         i + 1, highScores[i].name.c_str(), highScores[i].score);
-                attroff(COLOR_PAIR(rankColor));
-            }
+        // Row 2: Endless + Hell
+        // Endless mode card
+        int endlessGlow = ((frame / 2) + 2) % 8;
+        int endlessBorderColor = (endlessGlow < 4) ? 16 : 32;
+        attron(COLOR_PAIR(endlessBorderColor) | A_BOLD);
+        for (int i = 0; i < 26; ++i) {
+            mvprintw(menuY + 8, cx + 2 + i, "\xe2\x95\x90");
+            mvprintw(menuY + 12, cx + 2 + i, "\xe2\x95\x90");
         }
+        for (int i = 0; i < 4; ++i) {
+            mvprintw(menuY + 9 + i, cx + 2, "\xe2\x95\x91");
+            mvprintw(menuY + 9 + i, cx + 27, "\xe2\x95\x91");
+        }
+        mvprintw(menuY + 8, cx + 2, "\xe2\x95\x94");
+        mvprintw(menuY + 8, cx + 27, "\xe2\x95\x97");
+        mvprintw(menuY + 12, cx + 2, "\xe2\x95\x9a");
+        mvprintw(menuY + 12, cx + 27, "\xe2\x95\x9d");
+        attroff(COLOR_PAIR(endlessBorderColor) | A_BOLD);
+        attron(COLOR_PAIR(16) | A_BOLD);
+        mvprintw(menuY + 9, cx + 4, "\xe2\x96\xb6 [3] ENDLESS");
+        attroff(COLOR_PAIR(16) | A_BOLD);
+        attron(COLOR_PAIR(20));
+        mvprintw(menuY + 10, cx + 4, "  Push your limits");
+        mvprintw(menuY + 11, cx + 4, "  Speed keeps rising");
+        attroff(COLOR_PAIR(20));
 
-        // Footer with animated border
+        // Hell mode card
+        int hellGlow = ((frame / 2) + 6) % 8;
+        int hellBorderColor = (hellGlow < 4) ? 18 : 32;
+        attron(COLOR_PAIR(hellBorderColor) | A_BOLD);
+        for (int i = 0; i < 26; ++i) {
+            mvprintw(menuY + 8, cx + 31 + i, "\xe2\x95\x90");
+            mvprintw(menuY + 12, cx + 31 + i, "\xe2\x95\x90");
+        }
+        for (int i = 0; i < 4; ++i) {
+            mvprintw(menuY + 9 + i, cx + 31, "\xe2\x95\x91");
+            mvprintw(menuY + 9 + i, cx + 56, "\xe2\x95\x91");
+        }
+        mvprintw(menuY + 8, cx + 31, "\xe2\x95\x94");
+        mvprintw(menuY + 8, cx + 56, "\xe2\x95\x97");
+        mvprintw(menuY + 12, cx + 31, "\xe2\x95\x9a");
+        mvprintw(menuY + 12, cx + 56, "\xe2\x95\x9d");
+        attroff(COLOR_PAIR(hellBorderColor) | A_BOLD);
+        attron(COLOR_PAIR(18) | A_BOLD);
+        mvprintw(menuY + 9, cx + 33, "\xe2\x96\xb6 [4] HELL");
+        attroff(COLOR_PAIR(18) | A_BOLD);
+        attron(COLOR_PAIR(20));
+        mvprintw(menuY + 10, cx + 33, "  Maximum speed");
+        mvprintw(menuY + 11, cx + 33, "  No mercy for mortals");
+        attroff(COLOR_PAIR(20));
+
+        // Footer with animation
         attron(COLOR_PAIR(11));
         mvprintw(25, cx - 2, "\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
         attroff(COLOR_PAIR(11));
 
         int dots = frame % 4;
         attron(COLOR_PAIR(10) | A_BOLD);
-        mvprintw(26, cx + 8, "Press [1] CLASSIC  [2] STAGE  [Q] QUIT");
+        mvprintw(26, cx + 4, "Press [1-4] to select  |  [Q] QUIT");
         for (int i = 0; i < dots; ++i)
-            mvprintw(26, cx + 46 + i, ".");
+            mvprintw(26, cx + 40 + i, ".");
         attroff(COLOR_PAIR(10) | A_BOLD);
+
+        // Mode description preview
+        attron(COLOR_PAIR(20));
+        mvprintw(27, cx + 8, "[1]Classic [2]Stage [3]Endless [4]Hell");
+        attroff(COLOR_PAIR(20));
 
         // Version text
         attron(COLOR_PAIR(32));
-        mvprintw(27, cx + 14, "v2.0 - Enhanced Edition");
+        mvprintw(28, cx + 14, "v2.0 - Enhanced Edition");
         attroff(COLOR_PAIR(32));
 
         refresh();
@@ -528,6 +555,8 @@ static int showMainMenu() {
         int ch = getch();
         if (ch == '1') { playSound(6); return 1; }
         if (ch == '2') { playSound(6); return 2; }
+        if (ch == '3') { playSound(6); return 3; }
+        if (ch == '4') { playSound(6); return 4; }
         if (ch == 'q' || ch == 'Q') return 0;
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
@@ -898,6 +927,28 @@ static void renderGame(const Game& game) {
                 attroff(COLOR_PAIR(18) | A_BOLD);
             }
         }
+    } else if (game.mode() == GameMode::Endless) {
+        int endPulse = (vis.globalFrame / 5) % 2;
+        int endColor = (endPulse == 0) ? 16 : 10;
+        attron(COLOR_PAIR(endColor) | A_BOLD);
+        mvprintw(0, 4, "\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88 ENDLESS MODE \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88");
+        attroff(COLOR_PAIR(endColor) | A_BOLD);
+
+        // Show current speed level
+        attron(COLOR_PAIR(16));
+        mvprintw(0, 50, "Lv:%-3d Spd:%-3d", game.level(), game.dropMs());
+        attroff(COLOR_PAIR(16));
+    } else if (game.mode() == GameMode::Hell) {
+        int hellPulse = (vis.globalFrame / 2) % 4;
+        int hellColor = (hellPulse < 2) ? 18 : 32;
+        attron(COLOR_PAIR(hellColor) | A_BOLD);
+        mvprintw(0, 4, "\xe2\x9a\xa1\xe2\x9a\xa1\xe2\x9a\xa1 HELL MODE \xe2\x9a\xa1\xe2\x9a\xa1\xe2\x9a\xa1");
+        attroff(COLOR_PAIR(hellColor) | A_BOLD);
+
+        // Warning indicator
+        attron(COLOR_PAIR(18) | A_BOLD);
+        mvprintw(0, 50, "MAX SPEED!");
+        attroff(COLOR_PAIR(18) | A_BOLD);
     } else {
         attron(COLOR_PAIR(10) | A_BOLD);
         mvprintw(0, 4, "\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88 T E T R I S \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88");
@@ -1351,7 +1402,17 @@ static void renderGame(const Game& game) {
             attroff(COLOR_PAIR(19) | A_BOLD);
         }
     } else {
-        drawPanel(panelX, 26, 22, 4, "STATS", 9);
+        // Panel title based on mode
+        const char* panelTitle = "STATS";
+        int panelColor = 9;
+        if (game.mode() == GameMode::Endless) {
+            panelTitle = "ENDLESS";
+            panelColor = 16;
+        } else if (game.mode() == GameMode::Hell) {
+            panelTitle = "HELL";
+            panelColor = 18;
+        }
+        drawPanel(panelX, 26, 22, 4, panelTitle, panelColor);
         int elapsed = game.elapsedSeconds();
 
         // Time with color coding
@@ -2707,7 +2768,7 @@ restart:
             renderGame(game);
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
-    } else {
+    } else if (mode == 2) {
         // Stage mode
         while (true) {
             int stageIdx = showStageSelect();
@@ -2804,6 +2865,135 @@ stage_retry:
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(16));
             }
+        }
+    } else if (mode == 3 || mode == 4) {
+        // Endless mode or Hell mode
+        GameMode gameMode = (mode == 3) ? GameMode::Endless : GameMode::Hell;
+        Game game(gameMode, 1);
+        showGameStartAnimation(game);
+
+        while (true) {
+            game.setCurrentTime(static_cast<int>(
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count()));
+
+            int prevLevel = game.level();
+            int prevCombo = game.combo();
+
+            int ch;
+            while ((ch = getch()) != ERR) {
+                switch (ch) {
+                    case KEY_LEFT:  case 'a': case 'A': game.moveLeft();   break;
+                    case KEY_RIGHT: case 'd': case 'D': game.moveRight();  break;
+                    case KEY_UP:    game.rotate();     break;
+                    case KEY_DOWN:  game.softDrop();   break;
+                    case ' ':
+                        triggerHardDropTrail(game.current(), game.ghostRow());
+                        game.hardDrop();
+                        triggerShake(3);
+                        playSound(1);
+                        break;
+                    case 'h': case 'H': game.holdPiece(); playSound(6); break;
+                    case 'p': case 'P': game.togglePause(); break;
+                    case 'r': case 'R':
+                        if (game.gameOver()) {
+                            saveHighScore({"PLAYER", game.score(), game.level(),
+                                          game.lines(), game.elapsedSeconds()});
+                            game = Game(gameMode, 1);
+                            vis = VisualState();
+                        }
+                        break;
+                    case 'm': case 'M':
+                        if (game.gameOver()) goto restart;
+                        break;
+                    case 'q': case 'Q': goto quit;
+                }
+            }
+
+            game.tick();
+
+            ClearResult clear = game.lastClear();
+            if (clear.linesCleared > 0) {
+                triggerLineClear(clear.linesCleared);
+                triggerShake(clear.isTetris ? 5 : 2);
+                int lineScore = clear.linesCleared * 100 * game.level();
+                if (clear.isTetris) lineScore *= 2;
+                triggerScoreFlyup(lineScore);
+                if (clear.isTetris) {
+                    vis.tetrisFlashFrames = 15;
+                    playSound(3);
+                } else {
+                    playSound(2);
+                }
+            }
+            if (game.combo() > prevCombo && game.combo() > 1) {
+                triggerCombo(game.combo());
+                if (game.combo() >= 5) playSound(4);
+                else playSound(2);
+            }
+            if (game.level() > prevLevel) {
+                triggerLevelUp();
+                playSound(5);
+            }
+
+            renderGame(game);
+
+            if (game.gameOver()) {
+                showBombExplosion(game, 0);
+                saveHighScore({"PLAYER", game.score(), game.level(),
+                              game.lines(), game.elapsedSeconds()});
+                // Show simple game over screen
+                erase();
+                attron(COLOR_PAIR(32));
+                for (int r = 0; r < 30; ++r)
+                    for (int c = 0; c < 80; ++c)
+                        mvprintw(r, c, " ");
+                attroff(COLOR_PAIR(32));
+
+                int gc = (mode == 3) ? 16 : 18;
+                attron(COLOR_PAIR(gc) | A_BOLD);
+                if (mode == 3)
+                    mvprintw(8, 30, ">>> ENDLESS MODE <<<");
+                else
+                    mvprintw(8, 30, ">>>   HELL MODE   <<<");
+                attroff(COLOR_PAIR(gc) | A_BOLD);
+
+                attron(COLOR_PAIR(18) | A_BOLD);
+                mvprintw(12, 30, "\xe2\x9b\xb1 GAME OVER \xe2\x9b\xb1");
+                attroff(COLOR_PAIR(18) | A_BOLD);
+
+                attron(COLOR_PAIR(19) | A_BOLD);
+                mvprintw(15, 30, "Final Score: %d", game.score());
+                attroff(COLOR_PAIR(19) | A_BOLD);
+
+                attron(COLOR_PAIR(10));
+                mvprintw(17, 30, "Level: %d  Lines: %d", game.level(), game.lines());
+                int mins = game.elapsedSeconds() / 60;
+                int secs = game.elapsedSeconds() % 60;
+                mvprintw(18, 30, "Time: %d:%02d", mins, secs);
+                attroff(COLOR_PAIR(10));
+
+                attron(COLOR_PAIR(20));
+                mvprintw(22, 28, "[R] Retry  [M] Menu  [Q] Quit");
+                attroff(COLOR_PAIR(20));
+
+                refresh();
+
+                while (true) {
+                    int ch2 = getch();
+                    if (ch2 == 'r' || ch2 == 'R') {
+                        game = Game(gameMode, 1);
+                        vis = VisualState();
+                        showGameStartAnimation(game);
+                        break;
+                    }
+                    if (ch2 == 'm' || ch2 == 'M') goto restart;
+                    if (ch2 == 'q' || ch2 == 'Q') goto quit;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
     }
 
