@@ -1,5 +1,8 @@
 #include "tetris.h"
 #include <bits/stdc++.h>
+#include <algorithm>
+#include <fstream>
+#include <sstream>
 
 // ============================================================
 //  Piece shape definitions (base / spawn orientation)
@@ -164,13 +167,156 @@ Game::Game()
     : rng_(std::random_device{}())
     , curr_(PieceType::I)
     , next_(PieceType::I)
+    , startTime_(static_cast<int>(
+          std::chrono::duration_cast<std::chrono::seconds>(
+              std::chrono::steady_clock::now().time_since_epoch()).count()))
 {
+    currentTime_ = startTime_;
     refillBag();
     curr_ = Piece(drawFromBag());
     next_ = Piece(drawFromBag());
     curr_.setCol((BOARD_W - curr_.size()) / 2);
     curr_.setRow(0);
     lastDrop_ = std::chrono::steady_clock::now();
+}
+
+Game::Game(int startLevel)
+    : rng_(std::random_device{}())
+    , curr_(PieceType::I)
+    , next_(PieceType::I)
+    , level_(std::max(1, std::min(startLevel, 20)))
+    , startTime_(static_cast<int>(
+          std::chrono::duration_cast<std::chrono::seconds>(
+              std::chrono::steady_clock::now().time_since_epoch()).count()))
+{
+    currentTime_ = startTime_;
+    refillBag();
+    curr_ = Piece(drawFromBag());
+    next_ = Piece(drawFromBag());
+    curr_.setCol((BOARD_W - curr_.size()) / 2);
+    curr_.setRow(0);
+    lastDrop_ = std::chrono::steady_clock::now();
+}
+
+void Game::reset() {
+    *this = Game();
+}
+
+Game::Game(const Stage& stage)
+    : rng_(std::random_device{}())
+    , curr_(PieceType::I)
+    , next_(PieceType::I)
+    , level_(std::max(1, stage.startLevel))
+    , mode_(GameMode::Stage)
+    , stage_(stage)
+    , startTime_(static_cast<int>(
+          std::chrono::duration_cast<std::chrono::seconds>(
+              std::chrono::steady_clock::now().time_since_epoch()).count()))
+{
+    currentTime_ = startTime_;
+    refillBag();
+    initStageBoard();
+    curr_ = Piece(drawFromBag());
+    next_ = Piece(drawFromBag());
+    curr_.setCol((BOARD_W - curr_.size()) / 2);
+    curr_.setRow(0);
+    lastDrop_ = std::chrono::steady_clock::now();
+}
+
+void Game::initStageBoard() {
+    board_ = Board();
+    for (auto& [r, c] : stage_.prefill) {
+        if (board_.inBounds(r, c) && !board_.occupied(r, c)) {
+            int garbageColor = 8 + (r % 3); // use different garbage colors
+            board_.setCell(r, c, garbageColor);
+        }
+    }
+}
+
+void Game::checkStageComplete() {
+    if (mode_ != GameMode::Stage || stageComplete_) return;
+    
+    bool met = false;
+    switch (stage_.objective) {
+        case ObjectiveType::ClearLines:
+            met = (lines_ >= stage_.targetValue);
+            break;
+        case ObjectiveType::ReachScore:
+            met = (score_ >= stage_.targetValue);
+            break;
+        case ObjectiveType::SurviveTime:
+            met = (elapsedSeconds() >= stage_.targetValue);
+            break;
+        case ObjectiveType::ClearTetrises:
+            met = (tetrisCount_ >= stage_.targetValue);
+            break;
+        case ObjectiveType::ClearWithCombo:
+            met = (maxCombo_ >= stage_.targetValue);
+            break;
+        case ObjectiveType::PlacePieces:
+            met = (lines_ >= stage_.targetValue);
+            break;
+        case ObjectiveType::NoHold:
+            met = (noHoldLines_ >= stage_.targetValue);
+            break;
+        case ObjectiveType::SpeedClear:
+            met = (lines_ >= stage_.targetValue);
+            break;
+    }
+    if (met) {
+        stageComplete_ = true;
+        over_ = true;
+    }
+}
+
+int Game::stageObjectiveProgress() const {
+    if (mode_ != GameMode::Stage) return 0;
+    switch (stage_.objective) {
+        case ObjectiveType::ClearLines:
+        case ObjectiveType::SpeedClear:
+            return lines_;
+        case ObjectiveType::ReachScore:
+            return score_;
+        case ObjectiveType::SurviveTime:
+            return elapsedSeconds();
+        case ObjectiveType::ClearTetrises:
+            return tetrisCount_;
+        case ObjectiveType::ClearWithCombo:
+            return maxCombo_;
+        case ObjectiveType::PlacePieces:
+            return lines_;
+        case ObjectiveType::NoHold:
+            return noHoldLines_;
+    }
+    return 0;
+}
+
+std::string Game::stageObjectiveText() const {
+    if (mode_ != GameMode::Stage) return "";
+    switch (stage_.objective) {
+        case ObjectiveType::ClearLines:
+            return "Clear " + std::to_string(stage_.targetValue) + " lines";
+        case ObjectiveType::ReachScore:
+            return "Reach " + std::to_string(stage_.targetValue) + " pts";
+        case ObjectiveType::SurviveTime:
+            return "Survive " + std::to_string(stage_.targetValue) + "s";
+        case ObjectiveType::ClearTetrises:
+            return "Clear " + std::to_string(stage_.targetValue) + " tetris";
+        case ObjectiveType::ClearWithCombo:
+            return std::to_string(stage_.targetValue) + "x combo";
+        case ObjectiveType::PlacePieces:
+            return "Clear " + std::to_string(stage_.targetValue) + " lines in " + std::to_string(stage_.maxPieces) + " pieces";
+        case ObjectiveType::NoHold:
+            return "Clear " + std::to_string(stage_.targetValue) + " lines (no hold)";
+        case ObjectiveType::SpeedClear:
+            return "Clear " + std::to_string(stage_.targetValue) + " lines in " + std::to_string(stage_.timeLimit) + "s";
+    }
+    return "";
+}
+
+int Game::stageTimeRemaining() const {
+    if (mode_ != GameMode::Stage || stage_.timeLimit == 0) return -1;
+    return std::max(0, stage_.timeLimit - elapsedSeconds());
 }
 
 void Game::refillBag() {
@@ -223,6 +369,7 @@ void Game::moveRight() {
 }
 
 void Game::softDrop() {
+    if (mode_ == GameMode::Stage && stage_.disableSoftDrop) return;
     Piece p = curr_;
     p.setRow(p.row() + 1);
     if (tryMove(p))
@@ -266,13 +413,50 @@ void Game::lockPiece() {
     board_.place(curr_.row(), curr_.col(), curr_.shape(),
                  static_cast<int>(curr_.type()) + 1);
     int n = board_.clearLines();
+    lastClear_ = ClearResult();
+    lastClear_.linesCleared = n;
+    piecesPlaced_++;
+    
     if (n > 0) {
         static const int pts[] = {0, 100, 300, 500, 800};
         score_ += pts[n] * level_;
         lines_ += n;
         level_ = lines_ / 10 + 1;
+        combo_++;
+        lastClear_.combo = combo_;
+        if (combo_ > maxCombo_) maxCombo_ = combo_;
+        if (combo_ > 1) {
+            score_ += 50 * combo_ * level_;
+        }
+        if (n == 4) {
+            lastClear_.isTetris = true;
+            tetrisCount_++;
+        }
+        // Track no-hold lines
+        if (mode_ == GameMode::Stage && stage_.objective == ObjectiveType::NoHold) {
+            noHoldLines_ += n;
+        }
+    } else {
+        combo_ = 0;
     }
-    spawnPiece();
+    canHold_ = true;
+
+    // Check piece limit
+    if (mode_ == GameMode::Stage && stage_.maxPieces > 0 && piecesPlaced_ >= stage_.maxPieces) {
+        checkStageComplete();
+        if (!stageComplete_) over_ = true;
+        return;
+    }
+
+    // Check time limit
+    if (mode_ == GameMode::Stage && stage_.timeLimit > 0 && elapsedSeconds() >= stage_.timeLimit) {
+        checkStageComplete();
+        if (!stageComplete_) over_ = true;
+        return;
+    }
+
+    checkStageComplete();
+    if (!stageComplete_) spawnPiece();
 }
 
 void Game::spawnPiece() {
@@ -285,6 +469,24 @@ void Game::spawnPiece() {
     lastDrop_ = std::chrono::steady_clock::now();
 }
 
+void Game::holdPiece() {
+    if (!canHold_) return;
+    if (mode_ == GameMode::Stage && stage_.disableHold) return;
+    canHold_ = false;
+    
+    if (holdPiece_.has_value()) {
+        Piece temp = holdPiece_.value();
+        holdPiece_ = curr_;
+        curr_ = temp;
+        curr_.setCol((BOARD_W - curr_.size()) / 2);
+        curr_.setRow(0);
+    } else {
+        holdPiece_ = curr_;
+        spawnPiece();
+    }
+    lastDrop_ = std::chrono::steady_clock::now();
+}
+
 int Game::dropMs() const {
     return std::max(50, 800 - (level_ - 1) * 55);
 }
@@ -294,7 +496,7 @@ void Game::tick() {
     auto now = std::chrono::steady_clock::now();
     auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
                    now - lastDrop_).count();
-    if (ms < dropMs()) return;
+    if (ms < dropMs()) return;w's
 
     Piece p = curr_;
     p.setRow(p.row() + 1);
@@ -312,4 +514,154 @@ int Game::ghostRow() const {
         g.setRow(g.row() + 1);
         if (collides(g)) return g.row() - 1;
     }
+}
+
+// ============================================================
+//  High scores
+// ============================================================
+
+static const std::string SCORES_FILE = "highscores.txt";
+static const int MAX_HIGH_SCORES = 10;
+
+std::vector<HighScore> loadHighScores() {
+    std::vector<HighScore> scores;
+    std::ifstream file(SCORES_FILE);
+    if (!file.is_open()) return scores;
+    
+    std::string line;
+    while (std::getline(file, line) && scores.size() < MAX_HIGH_SCORES) {
+        std::istringstream iss(line);
+        HighScore hs;
+        if (iss >> hs.name >> hs.score >> hs.level >> hs.lines >> hs.time) {
+            scores.push_back(hs);
+        }
+    }
+    return scores;
+}
+
+void saveHighScore(const HighScore& hs) {
+    auto scores = loadHighScores();
+    scores.push_back(hs);
+    std::sort(scores.begin(), scores.end(),
+              [](const HighScore& a, const HighScore& b) { return a.score > b.score; });
+    if (scores.size() > MAX_HIGH_SCORES)
+        scores.resize(MAX_HIGH_SCORES);
+    
+    std::ofstream file(SCORES_FILE);
+    for (const auto& s : scores) {
+        file << s.name << " " << s.score << " " << s.level << " "
+             << s.lines << " " << s.time << "\n";
+    }
+}
+
+// ============================================================
+//  Stage definitions
+// ============================================================
+
+std::vector<Stage> getAllStages() {
+    return {
+        // --- Chapter 1: Tutorial ---
+        {1,  "First Steps",      "Clear 5 lines",
+         ObjectiveType::ClearLines, 5, 0, 1, 0, false, false, {}},
+        {2,  "Getting Faster",   "Clear 10 lines within 120s",
+         ObjectiveType::SpeedClear, 10, 120, 1, 0, false, false, {}},
+        {3,  "Score Hunter",     "Reach 2000 points",
+         ObjectiveType::ReachScore, 2000, 0, 2, 0, false, false, {}},
+
+        // --- Chapter 2: Survival ---
+        {4,  "Hold Your Ground", "Survive 60 seconds",
+         ObjectiveType::SurviveTime, 60, 60, 2, 0, false, false, {}},
+        {5,  "Junkyard",         "Clear 8 lines with garbage",
+         ObjectiveType::ClearLines, 8, 0, 2, 0, false, false,
+         {{19,0},{19,1},{19,3},{19,4},{19,5},{19,6},{19,8},{19,9},
+          {18,0},{18,2},{18,3},{18,5},{18,7},{18,8}}},
+        {6,  "Combo Master",     "Achieve a 3x combo",
+         ObjectiveType::ClearWithCombo, 3, 0, 3, 0, false, false, {}},
+
+        // --- Chapter 3: Tetris ---
+        {7,  "Tetris Time",      "Clear 3 tetris (4-line) clears",
+         ObjectiveType::ClearTetrises, 3, 0, 3, 0, false, false, {}},
+        {8,  "Piece Limit",      "Clear 15 lines in 40 pieces",
+         ObjectiveType::PlacePieces, 15, 0, 3, 40, false, false, {}},
+        {9,  "No Hold Challenge","Clear 10 lines without hold",
+         ObjectiveType::NoHold, 10, 0, 4, 0, true, false, {}},
+
+        // --- Chapter 4: Intense ---
+        {10, "Speed Demon",      "Clear 12 lines within 90s",
+         ObjectiveType::SpeedClear, 12, 90, 5, 0, false, false, {}},
+        {11, "Deep Garbage",     "Clear 10 lines with deep garbage",
+         ObjectiveType::ClearLines, 10, 0, 5, 0, false, false,
+         {{19,0},{19,2},{19,4},{19,6},{19,8},
+          {18,1},{18,3},{18,5},{18,7},{18,9},
+          {17,0},{17,2},{17,4},{17,6},{17,8},
+          {16,1},{16,3},{16,5},{16,7},{16,9}}},
+        {12, "Tetris Storm",     "Clear 5 tetris clears",
+         ObjectiveType::ClearTetrises, 5, 0, 6, 0, false, false, {}},
+
+        // --- Chapter 5: Expert ---
+        {13, "Speed Tetris",     "Clear 4 tetris in 60s",
+         ObjectiveType::SpeedClear, 16, 60, 7, 0, false, false, {}},
+        {14, "Minimalist",       "Clear 20 lines in 30 pieces",
+         ObjectiveType::PlacePieces, 20, 0, 8, 30, false, false, {}},
+        {15, "No Mercy",         "Clear 15 lines with no hold & garbage",
+         ObjectiveType::ClearLines, 15, 0, 8, 0, true, false,
+         {{19,1},{19,3},{19,5},{19,7},{19,9},
+          {18,0},{18,2},{18,4},{18,6},{18,8}}},
+        {16, "Combo King",       "Achieve a 5x combo",
+         ObjectiveType::ClearWithCombo, 5, 0, 9, 0, false, false, {}},
+
+        // --- Chapter 6: Master ---
+        {17, "Grand Tetris",     "Clear 8 tetris clears",
+         ObjectiveType::ClearTetrises, 8, 0, 10, 0, false, false, {}},
+        {18, "Marathon",         "Survive 180 seconds",
+         ObjectiveType::SurviveTime, 180, 180, 12, 0, false, false, {}},
+        {19, "Gauntlet",         "Clear 25 lines within 120s",
+         ObjectiveType::SpeedClear, 25, 120, 15, 0, false, false, {}},
+        {20, "Final Challenge",  "Clear 30 lines, no hold, max speed",
+         ObjectiveType::ClearLines, 30, 0, 20, 0, true, false,
+         {{19,0},{19,1},{19,2},{19,4},{19,5},{19,7},{19,8},{19,9},
+          {18,0},{18,3},{18,6},{18,9}}},
+    };
+}
+
+static const std::string STAGE_FILE = "stagedata.txt";
+
+std::vector<StageProgress> loadStageProgress() {
+    std::vector<StageProgress> progress(20);
+    std::ifstream file(STAGE_FILE);
+    if (!file.is_open()) return progress;
+    
+    std::string line;
+    int idx = 0;
+    while (std::getline(file, line) && idx < 20) {
+        std::istringstream iss(line);
+        iss >> progress[idx].stars >> progress[idx].bestScore >> progress[idx].bestTime;
+        idx++;
+    }
+    return progress;
+}
+
+void saveStageProgress(const std::vector<StageProgress>& progress) {
+    std::ofstream file(STAGE_FILE);
+    for (const auto& p : progress) {
+        file << p.stars << " " << p.bestScore << " " << p.bestTime << "\n";
+    }
+}
+
+// ============================================================
+//  Board helpers
+// ============================================================
+
+void Board::setCell(int r, int c, int val) {
+    if (inBounds(r, c))
+        grid_[r][c] = val;
+}
+
+void Board::addGarbage(int rows) {
+    for (int r = 0; r < TOTAL_H - rows; ++r)
+        for (int c = 0; c < BOARD_W; ++c)
+            grid_[r + rows][c] = grid_[r][c];
+    for (int r = 0; r < rows; ++r)
+        for (int c = 0; c < BOARD_W; ++c)
+            grid_[r][c] = 8; // garbage color
 }
