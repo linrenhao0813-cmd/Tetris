@@ -2,12 +2,6 @@
 
 A feature-rich Tetris game for the terminal, written in C++17 with **ncurses** wide-character support. Features 256-color graphics, two game modes (Classic + 20-stage campaign), hold piece, combo scoring, animated visual effects, and persistent high scores.
 
-![Preview](screenshot.png)
-
-> **Note:** Replace `screenshot.png` with an actual screenshot of the game running in your terminal.
-
----
-
 ## Features
 
 ### Gameplay
